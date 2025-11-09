@@ -13,6 +13,7 @@
   GROUP BY director
   ORDER BY no_of_titles DESC
   LIMIT 5;
+
   
 - **Objective**: This query identifies the top 5 directors with the most titles in the Netflix dataset, helping to identify prolific creators on the platform.
 
@@ -24,7 +25,8 @@
   ```sql
   SELECT title, country
   FROM netflix
-  WHERE array_length(string_to_array(country, ','), 1) > 1;
+  WHERE LENGTH(country) - LENGTH(REPLACE(country, ',', '')) + 1 > 1;
+
   ```
 - **Objective**: This query filters the dataset to find movies and TV shows produced in multiple countries, providing insights into global collaborations.
 
@@ -34,11 +36,12 @@
 
 - **Answer**:
   ```sql
-  SELECT rating, COUNT(*) AS no_of_content
+  SELECT rating , COUNT(*) AS no_of_content
   FROM netflix
-  WHERE rating IS NOT NULL AND NOT rating ~ ' min$'
+  WHERE rating IS NOT NULL AND rating NOT LIKE '%min'
   GROUP BY rating
   ORDER BY no_of_content DESC;
+
   ```
 - **Objective**: This query returns the count of content items grouped by their rating, excluding the 'min' rating to focus on standard ratings.
 
@@ -62,11 +65,13 @@
 
 - **Answer**:
   ```sql
-  SELECT EXTRACT(YEAR FROM date_added) AS year_of_addition,
+  SELECT YEAR(date_added) AS year_of_addition,
          COUNT(*) AS no_of_content
-  FROM NETFLIX
+  FROM netflix
   WHERE date_added IS NOT NULL
+  GROUP BY year_of_addition
   ORDER BY year_of_addition DESC;
+
   ```
 - **Objective**: This query provides insights into the yearly addition of content to Netflix, showing trends in how much content is added annually.
 
@@ -76,9 +81,10 @@
 
 - **Answer**:
   ```sql
-  SELECT title
+  SELECT title 
   FROM netflix
-  WHERE director ~* '(Rajiv Chilaka)';
+  WHERE director LIKE '%Rajiv Chilaka%';
+
   ```
 - **Objective**: This query filters content created by a specific director, in this case, 'Rajiv Chilaka', helping to gather all of his works on the platform.
 
@@ -90,7 +96,9 @@
   ```sql
   SELECT title
   FROM netflix
-  WHERE type = 'TV Show' AND CAST((string_to_array(duration,' '))[1] AS INTEGER) > 5;
+  WHERE type='TV Show' 
+    AND CAST(SUBSTRING_INDEX(duration,' ',1) AS UNSIGNED) > 5;
+
   ```
 - **Objective**:  This query filters TV shows with more than 5 seasons, providing insights into longer-running series on Netflix.
 ### 8. **Count the Number of Content Items in Each Genre**
@@ -99,14 +107,12 @@
 
 - **Answer**:
   ```sql
-  SELECT TRIM(genre) AS genre,
+  SELECT TRIM(SUBSTRING_INDEX(listed_in, ',', 1)) AS genre,
          COUNT(*) AS no_of_content
-  FROM (
-    SELECT UNNEST(string_to_array(listed_in, ',')) AS genre
-    FROM netflix
-  )
+  FROM netflix
   GROUP BY genre
   ORDER BY no_of_content DESC;
+
   ```
 - **Objective**:  This query counts the number of content items for each genre, helping to analyze the genre distribution in the dataset.
 
@@ -116,23 +122,18 @@
 
 - **Answer**:
   ```sql
-  WITH CTE AS (
-    SELECT 
-        EXTRACT(YEAR FROM date_added) AS year,
-        UNNEST(string_to_array(country, ',')) AS country
-    FROM netflix
-    WHERE date_added IS NOT NULL
-  )
   SELECT 
-      year,
+      YEAR(date_added) AS year,
       COUNT(*) AS total_titles,
-      ROUND(COUNT(*) * 1.0 / 12) AS avg_titles_per_month
-  FROM CTE
-  WHERE country = 'India'
+      ROUND(COUNT(*) / 12) AS avg_titles_per_month
+  FROM netflix
+  WHERE country LIKE '%India%' 
+    AND date_added IS NOT NULL
   GROUP BY year
   ORDER BY avg_titles_per_month DESC
   LIMIT 5;
   ```
+
 - **Objective**: This query calculates the average number of content items released in India per year, helping to identify the top years with the highest content release rate.
 
 
@@ -142,19 +143,15 @@
 
 - **Answer**:
   ```sql
-  WITH CTE AS (
-    SELECT 
-        title,
-        description,
-        CASE
-            WHEN description ~* '(kill|violence)' THEN 'Bad'
-            ELSE 'Good'
-        END AS category
-    FROM netflix 
-  )
-  SELECT category, COUNT(*)
-  FROM CTE
+  SELECT 
+      CASE
+          WHEN description REGEXP '(kill|violence)' THEN 'Bad'
+          ELSE 'Good'
+      END AS category,
+      COUNT(*) 
+  FROM netflix
   GROUP BY category;
+
   ```
 - **Objective**: This query categorizes content based on the presence of violent or harmful keywords, providing insights into the types of content available on the platform.
 
@@ -176,19 +173,14 @@
 
 - **Answer**:
   ```sql
-  WITH CTE AS (
-    SELECT
-        release_year, 
-        UNNEST(string_to_array(listed_in, ',')) AS genre,
-        COUNT(*) AS total_count,
-        RANK() OVER (PARTITION BY release_year ORDER BY COUNT(*) DESC) AS genre_rank
-    FROM netflix
-    GROUP BY release_year, genre
-    ORDER BY release_year DESC, genre_rank
-  )
-  SELECT release_year, genre, total_count
-  FROM CTE
-  WHERE genre_rank = 1;
+  SELECT
+      release_year,
+      SUBSTRING_INDEX(listed_in, ',', 1) AS genre,
+      COUNT(*) AS total_count
+  FROM netflix
+  GROUP BY release_year, genre
+  ORDER BY release_year DESC, total_count DESC;
+
   ```
 - **Objective**:  This query identifies the most popular genre for each year based on the number of titles in that genre, helping to highlight trends in content preferences over time.
 ### 13. **Content Longevity**
@@ -200,14 +192,15 @@
   SELECT 
       type,
       CASE 
-          WHEN type = 'Movie' THEN AVG(CAST(REGEXP_REPLACE(duration, '[^0-9]', '', 'g') AS INT))
-          WHEN type = 'TV Show' THEN ROUND(AVG(CAST(REGEXP_REPLACE(duration, '[^0-9]', '', 'g') AS INT)))
+          WHEN type = 'Movie' THEN AVG(CAST(REGEXP_REPLACE(duration, '[^0-9]', '') AS UNSIGNED))
+          WHEN type = 'TV Show' THEN ROUND(AVG(CAST(REGEXP_REPLACE(duration, '[^0-9]', '') AS UNSIGNED)))
       END AS avg_duration
   FROM netflix
   WHERE duration IS NOT NULL
   GROUP BY type;
+
   ```
-- **Question**: This query calculates the average duration for movies and TV shows, helping to analyze the typical length of content by type.
+- **Objective**: This query calculates the average duration for movies and TV shows, helping to analyze the typical length of content by type.
 
 
   
