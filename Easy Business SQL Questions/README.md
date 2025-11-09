@@ -111,35 +111,8 @@
 - **Objective**: This query identifies the longest movie or TV show based on its duration, highlighting the title with the most extended runtime.
 
 
-### 7. **Specific Genre Analysis**
 
-- **Question**: How many titles are listed under the genre "Comedy"?
-
-- **Answer**:
-
-  ```sql
-  SELECT t.*
-  FROM (
-      SELECT release_year,
-             TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(listed_in, ',', n.n), ',', -1)) AS genre,
-             COUNT(*) AS title_count,
-             (@r:=CASE WHEN @prev_year=release_year THEN @r+1 ELSE 1 END) AS genre_rank,
-             @prev_year:=release_year
-      FROM netflix
-      JOIN (SELECT @r:=0, @prev_year:=0) vars
-      JOIN (SELECT 1 AS n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) n
-      WHERE n.n <= 1 + LENGTH(listed_in) - LENGTH(REPLACE(listed_in, ',', ''))
-      GROUP BY release_year, genre
-      ORDER BY release_year DESC, title_count DESC
-  ) t
-  WHERE genre_rank < 4;
-
-    
-  
-- **Objective**:This query counts the number of titles classified under the "Comedy" genre, providing insights into the availability of comedy content on the platform.
-
-
-### 8. **Count the number of Movies vs TV Shows per Year**
+### 7. **Count the number of Movies vs TV Shows per Year**
 
 - **Question**: Count the number of Movies vs TV Shows for each year.
 
@@ -156,7 +129,7 @@
 - **Objective**: This query provides the number of Movies and TV Shows available for each release year, helping to analyze the content distribution by year and type.
 
 
-### 9. **Find the top 3 common ratings for Movies and TV Shows**
+### 8. **Find the top 3 common ratings for Movies and TV Shows**
 
 - **Question**: Find the top 3 most common ratings for movies and TV shows.
 
@@ -176,7 +149,7 @@
 
 - **Objective**:  This query shows the top 3 most common ratings for Movies and TV Shows, helping to understand the content's suitability and classification by ratings.
 
-### 10. **List all movies released in a specific year (e.g., 2020)**
+### 9. **List all movies released in a specific year (e.g., 2020)**
 
 - **Question**: List all movies released in a specific year, for example, 2020.
 
@@ -188,7 +161,7 @@
 
 - **Objective**:  This query filters the dataset to list all movies released in a specific year, in this case, 2020, providing insights into the movie releases of that year.
 
-### 11. **List all movies that are documentaries**
+### 10. **List all movies that are documentaries**
 
 - **Question**: List all movies that are documentaries.
 
@@ -208,7 +181,7 @@
 - **Objective**: This query identifies and lists all movies categorized as documentaries, filtering the dataset based on the genre field.
 
 
-### 12. **Find content added in the last 5 years**
+### 11. **Find content added in the last 5 years**
 
 - **Question**: Find the content added in the last 5 years.
 
