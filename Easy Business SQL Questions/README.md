@@ -162,16 +162,13 @@
 
 - **Answer**:
   ```sql
-  SELECT x.*
+  SELECT type, rating
   FROM (
-      SELECT type,rating,
+      SELECT type, rating,
              COUNT(*) AS no_of_rating,
-             (@r:=CASE WHEN @prev_type=type THEN @r+1 ELSE 1 END) AS ranks,
-             @prev_type:=type
+             RANK() OVER (PARTITION BY type ORDER BY COUNT(*) DESC) AS ranks
       FROM netflix
-      JOIN (SELECT @r:=0,@prev_type:='') vars
-      GROUP BY type,rating
-      ORDER BY type, no_of_rating DESC
+      GROUP BY type, rating
   ) x
   WHERE ranks < 4;
 
