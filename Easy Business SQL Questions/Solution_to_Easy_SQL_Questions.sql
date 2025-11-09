@@ -48,44 +48,14 @@ SELECT title, duration, type
 FROM netflix
 ORDER BY duration DESC, title ASC;
 
--- Q)7 Genre Popularity by Year
-SELECT *
-FROM (
-    SELECT
-        release_year,
-        SUBSTRING_INDEX(SUBSTRING_INDEX(listed_in, ',', n.n), ',', -1) AS genre,
-        COUNT(*) AS title_count,
-        (SELECT COUNT(*)
-         FROM (
-           SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(listed_in, ',', n2.n), ',', -1) AS g
-           FROM netflix n2
-           JOIN (
-             SELECT a.N + b.N * 10 + 1 AS n
-             FROM (SELECT 0 N UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) a
-             CROSS JOIN (SELECT 0 N UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) b
-           ) n2 ON n2.n <= LENGTH(listed_in) - LENGTH(REPLACE(listed_in, ',', '')) + 1
-           WHERE release_year = n.release_year
-         ) d
-         WHERE d.g = genre AND release_year = n.release_year
-        ) AS genre_rank
-    FROM netflix n
-    JOIN (
-        SELECT a.N + b.N * 10 + 1 AS n
-        FROM (SELECT 0 N UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) a
-        CROSS JOIN (SELECT 0 N UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) b
-    ) n
-    ON n.n <= LENGTH(listed_in) - LENGTH(REPLACE(listed_in, ',', '')) + 1
-    GROUP BY release_year, genre
-) AS x
-WHERE genre_rank <= 3;
 
--- Q)8 Count the number of Movies vs TV Shows per Year
+-- Q)7 Count the number of Movies vs TV Shows per Year
 SELECT release_year, type, COUNT(*) AS no_of_types
 FROM netflix
 GROUP BY release_year, type
 ORDER BY release_year DESC, type ASC;
 
--- Q)9 Find the top 3 common rating for movies and TV shows
+-- Q)8 Find the top 3 common rating for movies and TV shows
 SELECT type, rating
 FROM (
     SELECT type, rating,
@@ -96,14 +66,14 @@ FROM (
 ) x
 WHERE ranks < 4;
 
--- Q)10 List all movies released in 2020
+-- Q)9 List all movies released in 2020
 SELECT *
 FROM netflix
 WHERE release_year = 2020
 AND type='Movie'
 ORDER BY title ASC;
 
--- Q)11 List all Documentary Movies
+-- Q)10 List all Documentary Movies
 SELECT DISTINCT title, type, TRIM(genre) AS genre
 FROM (
     SELECT title, type,
@@ -118,7 +88,7 @@ FROM (
 WHERE genre = 'Documentaries'
 AND type='Movie';
 
--- Q)12 Find content added in last 5 years
+-- Q)11 Find content added in last 5 years
 SELECT date_added
 FROM netflix
 WHERE date_added BETWEEN
