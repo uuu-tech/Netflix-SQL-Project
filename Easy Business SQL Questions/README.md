@@ -34,25 +34,6 @@
 
 
 
-### 2. **Most Popular Genre**
-
-
-- **Question**: Which genre (listed_in) has the highest number of titles?
-
-- **Answer**:
-
-  ```sql
-  SELECT 
-      UNNEST(string_to_array(listed_in, ',')) AS genre,
-      COUNT(*) AS total_count
-  FROM netflix
-  GROUP BY genre
-  ORDER BY total_count DESC
-  LIMIT 1;
-  
-- **Objective**: This query identifies the genre with the highest number of titles available on the platform, providing insights into the most popular content category.
-
-
 
 ### 3. **Content by Year**
 
@@ -61,12 +42,13 @@
 - **Answer**:
 
   ```sql
-    SELECT EXTRACT(Year FROM date_added) AS year_added ,
-    COUNT(*) as content_count
-    FROM netflix
-    WHERE date_added IS NOT NULL
-    GROUP BY year_added
-    ORDER BY year_added ASC
+  SELECT YEAR(date_added) AS year_added,
+         COUNT(*) AS content_count
+  FROM netflix
+  WHERE date_added IS NOT NULL
+  GROUP BY YEAR(date_added)
+  ORDER BY year_added ASC;
+
   
 - **Objective**: This query provides a breakdown of the number of titles released each year, showing trends in content production over time.
 
@@ -78,19 +60,17 @@
 - **Answer**:
 
   ```sql
-    SELECT 
-        TRIM(country_name) AS country, 
-        COUNT(*) AS content_count
-    FROM (
-        SELECT 
-            UNNEST(string_to_array(country, ',')) AS country_name
-        FROM 
-            netflix
-    ) AS countries
-    GROUP BY 
-        TRIM(country_name)
-    ORDER BY 
-        content_count DESC;
+  SELECT TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(country, ',', n.n), ',', -1)) AS country,
+         COUNT(*) AS content_count
+  FROM netflix
+  JOIN (
+      SELECT 1 AS n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5
+  ) n
+  WHERE n.n <= 1 + LENGTH(country) - LENGTH(REPLACE(country, ',', ''))
+  GROUP BY country
+  ORDER BY content_count DESC
+  LIMIT 5;
+
   
 - **Objective**: This query identifies the top 5 countries that produce the most content on the platform, helping to understand regional contributions to the library.
 
@@ -103,9 +83,12 @@
 - **Answer**:
 
   ```sql
-    SELECT title ,date_added FROM netflix
-    WHERE date_added IS NOT NULL
-    ORDER BY date_added DESC
+  SELECT title, date_added
+  FROM netflix
+  WHERE date_added IS NOT NULL
+  ORDER BY date_added DESC
+  LIMIT 10;
+
   
   
 - **Objective**: This query retrieves the 10 most recently added titles, providing insights into the latest content updates on the platform.
@@ -119,9 +102,11 @@
 - **Answer**:
 
   ```sql
-    SELECT title ,duration, type FROM netflix
-    WHERE duration IS NOT NULL
-    ORDER BY duration DESC, title ASC
+  SELECT title, duration, type
+  FROM netflix
+  WHERE duration IS NOT NULL
+  ORDER BY duration DESC, title ASC;
+
   
 - **Objective**: This query identifies the longest movie or TV show based on its duration, highlighting the title with the most extended runtime.
 
@@ -133,28 +118,22 @@
 - **Answer**:
 
   ```sql
-    WITH top_genre_ranks AS
-    (
-    SELECT 
-        release_year, 
-        genre, 
-        COUNT(*) AS title_count,
-        RANK() OVER (PARTITION BY release_year ORDER BY COUNT(*) DESC) AS genre_rank
-    FROM (
-        SELECT 
-            release_year, 
-            UNNEST(string_to_array(listed_in, ',')) AS genre
-        FROM 
-            netflix
-    ) AS genres
-    GROUP BY 
-        release_year, genre
-    ORDER BY 
-        release_year DESC, genre_rank
-    )
-    
-    SELECT * FROM top_genre_ranks
-    WHERE genre_rank < 4
+  SELECT t.*
+  FROM (
+      SELECT release_year,
+             TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(listed_in, ',', n.n), ',', -1)) AS genre,
+             COUNT(*) AS title_count,
+             (@r:=CASE WHEN @prev_year=release_year THEN @r+1 ELSE 1 END) AS genre_rank,
+             @prev_year:=release_year
+      FROM netflix
+      JOIN (SELECT @r:=0, @prev_year:=0) vars
+      JOIN (SELECT 1 AS n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) n
+      WHERE n.n <= 1 + LENGTH(listed_in) - LENGTH(REPLACE(listed_in, ',', ''))
+      GROUP BY release_year, genre
+      ORDER BY release_year DESC, title_count DESC
+  ) t
+  WHERE genre_rank < 4;
+
     
   
 - **Objective**:This query counts the number of titles classified under the "Comedy" genre, providing insights into the availability of comedy content on the platform.
@@ -183,17 +162,19 @@
 
 - **Answer**:
   ```sql
-  WITH rating_ranks AS(
-    SELECT
-        rating,
-        count(*) AS no_of_rating,
-        RANK() OVER (PARTITION BY type ORDER BY COUNT(*) DESC) AS ranks
-    FROM netflix
-    GROUP BY type, rating
-  )
-  
-  SELECT type, rating FROM rating_ranks
+  SELECT x.*
+  FROM (
+      SELECT type,rating,
+             COUNT(*) AS no_of_rating,
+             (@r:=CASE WHEN @prev_type=type THEN @r+1 ELSE 1 END) AS ranks,
+             @prev_type:=type
+      FROM netflix
+      JOIN (SELECT @r:=0,@prev_type:='') vars
+      GROUP BY type,rating
+      ORDER BY type, no_of_rating DESC
+  ) x
   WHERE ranks < 4;
+
   ```
 
 - **Objective**:  This query shows the top 3 most common ratings for Movies and TV Shows, helping to understand the content's suitability and classification by ratings.
@@ -216,15 +197,15 @@
 
 - **Answer**:
   ```sql
-  SELECT DISTINCT(title), type, TRIM(genre) AS genre
-  FROM (
-      SELECT
-          title,
-          type,
-          UNNEST(string_to_array(listed_in, ',')) AS genre
-      FROM netflix
-  )
-  WHERE genre = 'Documentaries' AND type = 'Movie';
+  SELECT DISTINCT title, type, TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(listed_in, ',', n.n), ',', -1)) AS genre
+  FROM netflix
+  JOIN (
+      SELECT 1 AS n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5
+  ) n
+  WHERE n.n <= 1 + LENGTH(listed_in) - LENGTH(REPLACE(listed_in, ',', ''))
+  AND genre = 'Documentaries'
+  AND type = 'Movie';
+
   ```
 
 - **Objective**: This query identifies and lists all movies categorized as documentaries, filtering the dataset based on the genre field.
@@ -239,8 +220,10 @@
   SELECT date_added
   FROM netflix
   WHERE date_added BETWEEN 
-        (SELECT MAX(date_added) FROM netflix) - INTERVAL '4 years'
-        AND (SELECT MAX(date_added) FROM netflix)
+        (SELECT DATE_SUB(MAX(date_added), INTERVAL 4 YEAR) FROM netflix)
+        AND
+        (SELECT MAX(date_added) FROM netflix)
   ORDER BY date_added ASC;
+
   ```
 - **Objective**: This query retrieves the content added to Netflix in the last 5 years, which is useful for identifying recent releases and trends.
