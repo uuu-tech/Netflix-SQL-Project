@@ -20,7 +20,7 @@
 ### 2. **Most Popular Genre**
 
 
-- **Question**: Write a query to find the total number of movies and TV shows available on the platform.
+- **Question**: Write a query to find the top 5 most common genres listed in the Netflix dataset.
 
 - **Answer**:
 
@@ -30,7 +30,7 @@
   ORDER BY COUNT(*) DESC
   LIMIT 5
   
-- **Objective**: This query reveals the total number of Movies and TV Shows available on the platform, broken down by their type
+- **Objective**: This query reveals the top 5 genres that appear most frequently in the Netflix dataset.
 
 
 
